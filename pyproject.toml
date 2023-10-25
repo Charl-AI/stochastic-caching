@@ -8,9 +8,11 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
-# the weird torch version is to avoid this issue:
+# NB: torch 2.1.0 has a known issue:
 # https://stackoverflow.com/questions/76327419/valueerror-libcublas-so-0-9-not-found-in-the-system-path
-torch = ">=2.0.0, !=2.0.1, !=2.1.0"
+# an easy workaround for development is just to reinstall with pip
+# this does not affect users of this library
+torch = "^2.1.0"
 numpy = "^1.26.1"
 
 
