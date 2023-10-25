@@ -7,8 +7,10 @@ license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.10"
-torch = "^2.1.0"
+python = ">=3.10,<3.13"
+# the weird torch version is to avoid this issue:
+# https://stackoverflow.com/questions/76327419/valueerror-libcublas-so-0-9-not-found-in-the-system-path
+torch = ">=2.0.0, !=2.0.1, !=2.1.0"
 numpy = "^1.26.1"
 
 
