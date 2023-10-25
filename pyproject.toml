@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "stocaching"
+version = "0.1.0"
+description = "A tiny library for stochastic dataset caching in PyTorch."
+authors = ["C Jones <cj1917@ic.ac.uk>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+torch = "^2.1.0"
+numpy = "^1.26.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
