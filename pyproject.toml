@@ -18,6 +18,7 @@ numpy = "^1.26.1"
 
 [tool.poetry.group.dev.dependencies]
 torchvision = "^0.16.0"
+tqdm = "^4.66.1"
 
 [build-system]
 requires = ["poetry-core"]
