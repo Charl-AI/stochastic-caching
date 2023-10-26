@@ -1,11 +1,13 @@
 import argparse
 
+import torch
 from torch.utils.data import DataLoader
 
 from benchmark.dataset import DummyDataset
 from benchmark.trainer import train
 
 parser = argparse.ArgumentParser()
+parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--data-dir", type=str, default="/data2/dummy_data")
 parser.add_argument("--cache-limit-gib", type=int, default=0)
 parser.add_argument("--batch-size", type=int, default=256)
@@ -15,6 +17,7 @@ parser.add_argument("--epochs", type=int, default=2)
 
 
 def main(args):
+    torch.manual_seed(args.seed)
     dataset = DummyDataset(args.data_dir, args.cache_limit_gib)
     loader = DataLoader(
         dataset,
