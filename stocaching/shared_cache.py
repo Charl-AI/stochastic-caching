@@ -151,7 +151,7 @@ class SharedCache:
                 return False
             else:
                 raise IndexError(f"Index {idx} is out of bounds for SharedCache.")
-        return all(self.shm[idx] == 0)
+        return bool(torch.all(self.shm[idx] == 0))
 
     def set_slot(
         self,
