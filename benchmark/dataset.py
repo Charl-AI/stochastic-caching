@@ -102,11 +102,10 @@ class DummyDataset(Dataset):
         if self.cache_limit_gib == 0:
             return self.augmentations(self._get_img(idx))
 
-        # check if img is in cache
-        if not self.cache.is_slot_empty(idx):
-            img = self.cache[idx]
+        # try to read the image from cache
+        img = self.cache.get_slot(idx)
         # otherwise, read from disk and try to cache
-        else:
+        if img is None:
             img = self._get_img(idx)  # uint8 tensor
             self.cache.set_slot(idx, img)
 
