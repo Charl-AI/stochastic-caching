@@ -74,7 +74,7 @@ In all epochs apart from the first, stochastic caching gives a speedup that scal
 | ![](assets/local_sweep.png) | ![](assets/remote_sweep.png) |
 
 
-## FAQ:
+## FAQ
 
 ### How much memory should I allocate to the cache?
 
