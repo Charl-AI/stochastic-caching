@@ -120,9 +120,6 @@ class SharedCache:
         self.shm = torch.from_numpy(shared_array)
         self.shm *= 0
 
-        # separate locks for each slot
-        self.locks = [mp.Lock() for _ in range(cache_len)]
-
     @property
     def underlying_array(self) -> torch.Tensor:
         """Access the full underlying shared memory array.
@@ -130,12 +127,10 @@ class SharedCache:
         return self.shm
 
     def __getitem__(self, idx: int):
-        with self.locks[idx]:
-            return self.shm[idx]
+        return self.shm[idx]
 
     def __setitem__(self, idx: int, value: torch.Tensor):
-        with self.locks[idx]:
-            self.shm[idx] = value
+        self.shm[idx] = value
 
     def __len__(self):
         return len(self.shm)
