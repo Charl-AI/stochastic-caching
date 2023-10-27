@@ -69,6 +69,10 @@ We perform two sets of experiments: one with the data on a local HDD, and one wi
 
 In all epochs apart from the first, stochastic caching gives a speedup that scales linearly with the percentage of the dataset being cached. There is a very small cost in the first epoch (due to filling the cache), but by the end of the second epoch, all experiments had more than compensated for this.
 
+|          Local HDD          |         Remote data          |
+| :-------------------------: | :--------------------------: |
+| ![](assets/local_sweep.png) | ![](assets/remote_sweep.png) |
+
 ## Reproducing the benchmarks
 
 If you feel like it, please reproduce these benchmarks on your setup!
