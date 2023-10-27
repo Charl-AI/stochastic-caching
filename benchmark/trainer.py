@@ -7,7 +7,7 @@ from torchvision.models import mobilenet_v3_small
 from tqdm import tqdm
 
 
-def train(loader: DataLoader, num_epochs: int):
+def train(loader: DataLoader, num_epochs: int) -> list[float]:
     # using a tiny model because we do not want to be compute bound when
     # benchmarking the dataloading
     model = mobilenet_v3_small()
@@ -17,7 +17,10 @@ def train(loader: DataLoader, num_epochs: int):
     model.train()
     params = list(model.parameters()) + list(prediction_head.parameters())
     optim = torch.optim.Adam(params, lr=1e-3)
+
+    times = []
     for epoch in range(num_epochs):
+        torch.cuda.synchronize()
         epoch_start = time.time()
         for batch in tqdm(loader, desc=f"Epoch {epoch}"):
             x = batch.to("cuda")
@@ -30,5 +33,9 @@ def train(loader: DataLoader, num_epochs: int):
             loss.backward()
             optim.step()
 
+        torch.cuda.synchronize()  # wait for all computations to finish
         epoch_end = time.time()
-        print(f"Epoch {epoch} took {epoch_end - epoch_start:.3f}s")
+        epoch_time = epoch_end - epoch_start
+        times.append(epoch_time)
+        print(f"Epoch {epoch} took {epoch_time:.3f}s")
+    return times
