@@ -155,7 +155,7 @@ class SharedCache:
         (i.e. returns True if all(cache[idx] == 0)). Returns False
         if the slot contains any non-zero values.
 
-        Warning: if you're dataset has any legitimate all-zero
+        Warning: if your dataset has any legitimate all-zero
         datapoints, they will be mistakenly seen as empty!
 
         Args:

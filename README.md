@@ -22,7 +22,7 @@ Adding stochastic caching to your existing datasets is dead simple. Simply follo
 
 You can get and set items in the cache with `x = cache[idx]`, and `cache[idx] = x`. You can picture the cache as a list-like structure with a slot for each datapoint.
 
-When the dataset is too large to cache completely, `len(cache) < len(dataset)`. Using the getter and setter directly would thus result in lots of fiddly code to check if idx is in bounds for the cache. We provide two convenience methods `get_slot`, and `set_slot`, which allow you to treat the cache as if it has the same length as the dataset. Using `get_slot` out of bounds of the cache simply returns `None`. Using `set_slot` out of bounds is a no-op. These methods are designed to minimise the amount of code you need to write in the `__getitem__` method of your dataset.
+When the dataset is too large to cache completely, `len(cache) < len(dataset)`. If you used the getter and setter directly, you would end up with lots of fiddly code to check if idx is in bounds for the cache. We provide two convenience methods `get_slot`, and `set_slot`, which allow you to treat the cache as if it has the same length as the dataset. Using `get_slot` out of bounds of the cache simply returns `None`. Using `set_slot` out of bounds is a no-op. These methods are designed to minimise the amount of code you need to write in the `__getitem__` method of your dataset.
 
 **Advanced:** Internally, the cache is simply a single pytorch array, backed by shared memory. You can access the underlying array with the `underlying_array` property.
 
