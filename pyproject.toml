@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "stocaching"
-version = "0.1.0"
+version = "0.1.1"
 description = "A tiny library for stochastic dataset caching in PyTorch."
 authors = ["C Jones <cj1917@ic.ac.uk>"]
 license = "MIT"
