@@ -67,13 +67,28 @@ We train `mobilenet_v3_small` on a 50k sample dataset for two epochs. The reason
 
 We perform two sets of experiments: one with the data on a local HDD, and one with the data being read from another machine on the network.
 
-In all epochs apart from the first, stochastic caching gives a speedup that scales linearly with the percentage of the dataset being cached. There is a very small cost in the first epoch (due to filling the cache), but by the end of the second epoch, all experiments had more than compensated for this.
+In all epochs apart from the first, stochastic caching gives a speedup that scales linearly with the percentage of the dataset being cached. There is a very small overhead in the first epoch (due to filling the cache), but by the end of the second epoch, the speedup from caching more than compensates for this.
 
 |          Local HDD          |         Remote data          |
 | :-------------------------: | :--------------------------: |
 | ![](assets/local_sweep.png) | ![](assets/remote_sweep.png) |
 
-## Reproducing the benchmarks
+
+## FAQ:
+
+### How much memory should I allocate to the cache?
+
+As much as you like! The speedup from caching scales linearly with the % of your dataset being cached.
+
+The shared memory is stored in `/dev/shm` (tmpfs), so this is likely the limiting factor for you. We provide a convenience function `get_shm_size` to check how large it is. Alternatively, check with `df -h`.
+
+Most unix-like systems have `/dev/shm` pre-set to 50% of your RAM. You can temporarily resize it (e.g. to 128 GiB) by running: `mount -o remount,size=128G /dev/shm`.
+
+### Does this work with multi-GPU (DDP) training?
+
+Almost. I'll push an update to support it soon.
+
+### How do I Reproduce the benchmarks?
 
 If you feel like it, please reproduce these benchmarks on your setup!
 
