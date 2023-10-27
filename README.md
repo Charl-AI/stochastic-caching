@@ -88,7 +88,7 @@ Most unix-like systems have `/dev/shm` pre-set to 50% of your RAM. You can tempo
 
 Almost. I'll push an update to support it soon.
 
-### How do I Reproduce the benchmarks?
+### How do I reproduce the benchmarks?
 
 If you feel like it, please reproduce these benchmarks on your setup!
 
