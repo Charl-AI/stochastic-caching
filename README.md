@@ -16,11 +16,11 @@ pip install stocaching
 
 Adding stochastic caching to your existing datasets is dead simple. Simply follow these two steps:
 
-1. Create a `SharedCache` object in the `__init__` method of your dataset. You tell `SharedCache` about the size of your dataset and the maximum amount of space you want the cache to take up. `SharedCache` then calculates the maximum number of datapoints that can fit, and allocates that many slots to store data in.
+1. Create a `SharedCache` object in the `__init__` method of your dataset. You tell `SharedCache` about the size of your dataset and the maximum amount of space you want the cache to take up. `SharedCache` then calculates the maximum number of samples that can fit, and allocates that many slots to store data in.
 
 2. In the `__getitem__` method of your dataset, interact with the `SharedCache` object to either read the data from the cache (if it has already been cached), or write the data to the cache (if it has not yet been cached).
 
-You can get and set items in the cache with `x = cache[idx]`, and `cache[idx] = x`. You can picture the cache as a list-like structure with a slot for each datapoint.
+You can get and set items in the cache with `x = cache[idx]`, and `cache[idx] = x`. You can picture the cache as a list-like structure with a slot for each sample.
 
 When the dataset is too large to cache completely, `len(cache) < len(dataset)`. If you used the getter and setter directly, you would end up with lots of fiddly code to check if idx is in bounds for the cache. We provide two convenience methods `get_slot`, and `set_slot`, which allow you to treat the cache as if it has the same length as the dataset. Using `get_slot` out of bounds of the cache simply returns `None`. Using `set_slot` out of bounds is a no-op. These methods are designed to minimise the amount of code you need to write in the `__getitem__` method of your dataset.
 
@@ -72,7 +72,6 @@ In all epochs apart from the first, stochastic caching gives a speedup that scal
 |          Local HDD          |         Remote data          |
 | :-------------------------: | :--------------------------: |
 | ![](assets/local_sweep.png) | ![](assets/remote_sweep.png) |
-
 
 ## FAQ
 

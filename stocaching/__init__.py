@@ -29,7 +29,7 @@ class SharedCache:
     When applied to a large, shuffled dataset, we call this 'stochastic caching'.
 
     You may interact with the cache directly as if it were a list of slots,
-    with one slot per datapoint. Get and set with `x = cache[0]` and `cache[0] = x`.
+    with one slot per sample. Get and set with `x = cache[0]` and `cache[0] = x`.
 
     Using the getter and setter directly can be fiddly if you are only caching part
     of the dataset. We expose two convenience methods (`get_slot` and `set_slot`),
@@ -156,7 +156,7 @@ class SharedCache:
         if the slot contains any non-zero values.
 
         Warning: if your dataset has any legitimate all-zero
-        datapoints, they will be mistakenly seen as empty!
+        samples, they will be mistakenly seen as empty!
 
         Args:
             idx (int): Index of the slot to check.
@@ -185,7 +185,7 @@ class SharedCache:
         In this case the method is a no-op when idx is out of bounds.
 
         Args:
-            idx (int): Index of the slot (datapoint) to set.
+            idx (int): Index of the slot to set.
             value (torch.Tensor): Value to set the slot to.
             allow_oob_idx (bool, optional): When False, raises an error if
                 idx is out of bounds of the dataset. Defaults to True.
@@ -221,7 +221,7 @@ class SharedCache:
         In this case the method returns None when idx is out of bounds.
 
         Args:
-            idx (int): Index of the slot (datapoint) to get.
+            idx (int): Index of the slot to get.
             allow_oob_idx (bool, optional): When False, raises an error if
                 idx is out of bounds of the dataset. Defaults to True.
             allow_empty_slot (bool, optional): When True, returns
