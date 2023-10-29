@@ -135,22 +135,23 @@ class SharedCache:
         )
         shared_array = np.ctypeslib.as_array(shared_array_base.get_obj())
         shared_array = shared_array.reshape((cache_len, *data_dims))
-        self.shm = torch.from_numpy(shared_array)
-        self.shm *= 0
+        self._shm = torch.from_numpy(shared_array)
+        self._shm *= 0
 
         shared_aux_base = mp.Array(C_DTYPES[torch.uint8], dataset_len)
         shared_aux = np.ctypeslib.as_array(shared_aux_base.get_obj())
-        self.aux = torch.from_numpy(shared_aux)
-        self.aux *= 0
+        self._aux = torch.from_numpy(shared_aux)
+        self._aux *= 0
 
         # only cache the first cache_len samples by index
-        self.aux[cache_len:] = SlotState.OOB.value
+        self._aux[cache_len:] = SlotState.OOB.value
 
     @property
-    def underlying_array(self) -> torch.Tensor:
-        """Access the full underlying shared memory array.
-        This is a single torch tensor, backed by shared memory."""
-        return self.shm
+    def array(self) -> torch.Tensor:
+        """Access the full underlying cache array.
+        Returns a torch tensor of shape (cache_len, *data_dims).
+        The dtype is whatever you specified when constructing the cache."""
+        return self._shm
 
     @property
     def aux_array(self) -> torch.Tensor:
@@ -161,16 +162,16 @@ class SharedCache:
         `self.aux_array[idx] == 1` means sample idx is cached.
         `self.aux_array[idx] == 2` means sample idx is OOB.
         """
-        return self.aux
+        return self._aux
 
     def __getitem__(self, idx: int):
-        return self.shm[idx]
+        return self.array[idx]
 
     def __setitem__(self, idx: int, value: torch.Tensor):
-        self.shm[idx] = value
+        self.array[idx] = value
 
     def __len__(self):
-        return len(self.shm)
+        return len(self.array)
 
     def _slot_state(self, idx: int) -> SlotState:
         """Get the state of a slot in the cache. Raises an error if idx is outside
@@ -179,7 +180,7 @@ class SharedCache:
             raise IndexError(
                 f"Index {idx} out of bounds for dataset of length {len(self.aux_array)}"
             )
-        return SlotState(self.aux[idx].item())
+        return SlotState(self._aux[idx].item())
 
     def set_slot(
         self,
@@ -218,7 +219,7 @@ class SharedCache:
             )
 
         self[idx] = value
-        self.aux[idx] = SlotState.SET.value
+        self._aux[idx] = SlotState.SET.value
 
     def get_slot(
         self,
