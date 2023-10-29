@@ -29,6 +29,7 @@ When the dataset is too large to cache completely, `len(cache) < len(dataset)`. 
 ## Example
 
 ```python
+import torch
 from stocaching import SharedCache
 from torch.utils.data import Dataset
 
