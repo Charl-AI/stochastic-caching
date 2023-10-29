@@ -148,15 +148,16 @@ class SharedCache:
 
     @property
     def array(self) -> torch.Tensor:
-        """Access the full underlying cache array.
+        """Access the full underlying cache (just a tensor backed by shared memory).
         Returns a torch tensor of shape (cache_len, *data_dims).
         The dtype is whatever you specified when constructing the cache."""
         return self._shm
 
     @property
     def aux_array(self) -> torch.Tensor:
-        """Access the underlying auxilliary array. This keeps track of which samples
-        have been cached, which samples will be cached, and which are OOB.
+        """Access the auxiliary array (just a tensor backed by shared memory).
+        The auxiliary array keeps track of which samples from the full dataset have been
+        cached, which samples are yet to be cached, and which are OOB.
         Returns a shared memory torch uint8 tensor, shape (dataset_len,).
         `self.aux_array[idx] == 0` means sample idx is not cached.
         `self.aux_array[idx] == 1` means sample idx is cached.
@@ -219,7 +220,7 @@ class SharedCache:
             )
 
         self[idx] = value
-        self._aux[idx] = SlotState.SET.value
+        self.aux_array[idx] = SlotState.SET.value
 
     def get_slot(
         self,
