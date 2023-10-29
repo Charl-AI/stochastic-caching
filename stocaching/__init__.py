@@ -261,6 +261,12 @@ class SharedCache:
                 )
         return self[idx]
 
+    def clear(self) -> None:
+        """Clear all slots in the cache."""
+        self._shm *= 0
+        self._aux *= 0
+        self._aux[len(self) :] = SlotState.OOB.value
+
 
 def get_shm_size() -> int:
     """Get size of /dev/shm. The size limit of the shared memory cache

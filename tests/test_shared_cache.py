@@ -126,6 +126,30 @@ def test_get_slot(cache: SharedCache):
         _ = cache.get_slot(idx_to_get)
 
 
+def test_clear_slots(cache: SharedCache):
+    cache_len = len(cache)
+    idx_to_set = int(torch.randint(0, cache_len, (1,)).item())
+
+    value = torch.randint(0, 255, DATA_DIMS, dtype=DTYPE)
+    cache.set_slot(idx_to_set, value, allow_oob_idx=False, allow_overwrite=False)
+    assert torch.all(cache[idx_to_set] == value)
+
+    value2 = torch.randint(0, 255, DATA_DIMS, dtype=DTYPE)
+    with pytest.raises(RuntimeError):
+        cache.set_slot(idx_to_set, value2, allow_overwrite=False)
+
+    cache.clear()
+
+    with pytest.raises(RuntimeError):
+        _ = cache.get_slot(idx_to_set, allow_oob_idx=False, allow_empty_slot=False)
+
+    val = cache.get_slot(idx_to_set, allow_oob_idx=False, allow_empty_slot=True)
+    assert val is None
+
+    cache.set_slot(idx_to_set, value2, allow_overwrite=False)
+    assert torch.all(cache[idx_to_set] == value2)
+
+
 @pytest.mark.skip(reason="Not a test, just a helper")
 def set_slot(cache: SharedCache, idx: int, value: torch.Tensor):
     cache.set_slot(idx, value, allow_overwrite=True, allow_oob_idx=False)
