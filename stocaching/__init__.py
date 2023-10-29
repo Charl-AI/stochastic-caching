@@ -3,6 +3,7 @@
 import ctypes
 import multiprocessing as mp
 import os
+from enum import Enum
 
 import numpy as np
 import torch
@@ -21,6 +22,14 @@ C_DTYPES = {
     torch.float32: ctypes.c_float,
     torch.float64: ctypes.c_double,
 }
+
+
+class SlotState(Enum):
+    EMPTY = 0
+    SET = 1
+    # in this context, OOB means outside the range of the cache,
+    # but inside the range of the full dataset
+    OOB = 2
 
 
 class SharedCache:
@@ -94,26 +103,30 @@ class SharedCache:
                 bool, uint8, int8, int16, int32, int64, float32, float64.
                 Defaults to torch.uint8 (this is usually best for jpg images).
         """
-        self._apparent_len = dataset_len
-
         dtype_bytes = dtype.itemsize
         slot_bytes = np.prod(data_dims) * dtype_bytes
         dataset_bytes = slot_bytes * dataset_len
         size_limit_bytes = size_limit_gib * BYTES_PER_GIB
 
-        if dataset_bytes > size_limit_bytes:
-            cache_len = int(size_limit_bytes / slot_bytes)
+        # we allocate a flat 8-bit array to keep track of which samples are cached,
+        # which are not cached yet, and which are out of bounds of the cache
+        aux_bytes = dataset_len * torch.uint8.itemsize
+
+        ds_and_aux_bytes = dataset_bytes + aux_bytes
+
+        if ds_and_aux_bytes > size_limit_bytes:
+            cache_len = int((size_limit_bytes - aux_bytes) / slot_bytes)
             print(
-                f"Dataset size ({dataset_bytes / BYTES_PER_GIB:.1f} GiB) exceeds cache"
-                + f" limit ({size_limit_gib} GiB)."
+                f"Dataset size ({ds_and_aux_bytes / BYTES_PER_GIB:.1f} GiB)"
+                + f" exceeds cache limit ({size_limit_gib} GiB)."
                 + f" Allocating space to cache {cache_len} / {dataset_len} samples."
             )
 
         else:
             cache_len = dataset_len
             print(
-                f"Dataset size ({dataset_bytes / BYTES_PER_GIB:.1f} GiB) fits in cache"
-                + f" limit ({size_limit_gib} GiB)."
+                f"Dataset size ({ds_and_aux_bytes / BYTES_PER_GIB:.1f} GiB)"
+                + f" fits in cache limit ({size_limit_gib} GiB)."
                 + f" Allocating space to cache all {cache_len} samples."
             )
 
@@ -125,11 +138,30 @@ class SharedCache:
         self.shm = torch.from_numpy(shared_array)
         self.shm *= 0
 
+        shared_aux_base = mp.Array(C_DTYPES[torch.uint8], dataset_len)
+        shared_aux = np.ctypeslib.as_array(shared_aux_base.get_obj())
+        self.aux = torch.from_numpy(shared_aux)
+        self.aux *= 0
+
+        # only cache the first cache_len samples by index
+        self.aux[cache_len:] = SlotState.OOB.value
+
     @property
     def underlying_array(self) -> torch.Tensor:
         """Access the full underlying shared memory array.
         This is a single torch tensor, backed by shared memory."""
         return self.shm
+
+    @property
+    def aux_array(self) -> torch.Tensor:
+        """Access the underlying auxilliary array. This keeps track of which samples
+        have been cached, which samples will be cached, and which are OOB.
+        Returns a shared memory torch uint8 tensor, shape (dataset_len,).
+        `self.aux_array[idx] == 0` means sample idx is not cached.
+        `self.aux_array[idx] == 1` means sample idx is cached.
+        `self.aux_array[idx] == 2` means sample idx is OOB.
+        """
+        return self.aux
 
     def __getitem__(self, idx: int):
         return self.shm[idx]
@@ -140,39 +172,14 @@ class SharedCache:
     def __len__(self):
         return len(self.shm)
 
-    def _idx_in_cache(self, idx: int) -> bool:
-        """Check if an index is within the cache. Returns True if it is.
-        False if it is outside the cache, but within the dataset. Raises
-        an IndexError if it is outside the dataset completely."""
-        if idx < 0 or idx >= self._apparent_len:
+    def _slot_state(self, idx: int) -> SlotState:
+        """Get the state of a slot in the cache. Raises an error if idx is outside
+        the range of the full dataset."""
+        if idx < 0 or idx >= len(self.aux_array):
             raise IndexError(
-                f"Index {idx} out of bounds for dataset of length {self._apparent_len}"
+                f"Index {idx} out of bounds for dataset of length {len(self.aux_array)}"
             )
-        elif idx >= len(self):
-            return False
-        else:
-            return True
-
-    def is_slot_empty(self, idx: int) -> bool:
-        """Check if a slot in the cache has anything stored in it.
-
-        Relies on the fact that the cache is initialized to all zeros
-        (i.e. returns True if all(cache[idx] == 0)). Returns False
-        if the slot contains any non-zero values.
-
-        Warning: if your dataset has any legitimate all-zero
-        samples, they will be mistakenly seen as empty!
-
-        Args:
-            idx (int): Index of the slot to check.
-        Returns:
-            (bool) True if slot is empty (all zeros), False otherwise.
-        """
-        if not self._idx_in_cache(idx):
-            raise IndexError(
-                f"Index {idx} out of bounds of SharedCache of length {len(self)}"
-            )
-        return bool(torch.all(self.shm[idx] == 0))
+        return SlotState(self.aux[idx].item())
 
     def set_slot(
         self,
@@ -185,7 +192,7 @@ class SharedCache:
 
         The main reason to use this method over __setitem__ is that we
         allow you to call this method when idx is out of bounds of the
-        cache (by setting allow_oob_idx=True).
+        cache, but within the range of the full dataset.
 
         In this case the method is a no-op when idx is out of bounds.
 
@@ -193,23 +200,25 @@ class SharedCache:
             idx (int): Index of the slot to set.
             value (torch.Tensor): Value to set the slot to.
             allow_oob_idx (bool, optional): When False, raises an error if
-                idx is out of bounds of the dataset. Defaults to True.
+                idx is out of bounds of the cache. Defaults to True.
             allow_overwrite (bool, optional): When False, raises an error if
                 the slot has any existing non-zero elements. Defaults to False.
         """
-        if not self._idx_in_cache(idx):
+        slot_state = self._slot_state(idx)
+        if slot_state == SlotState.OOB:
             if not allow_oob_idx:
                 raise IndexError(
                     f"Index {idx} out of bounds of SharedCache of length {len(self)}"
                 )
             return  # no-op
 
-        if not allow_overwrite and not self.is_slot_empty(idx):
+        if slot_state == SlotState.SET and not allow_overwrite:
             raise RuntimeError(
                 f"Tried to overwrite non-empty slot {idx=} in SharedCache."
             )
 
         self[idx] = value
+        self.aux[idx] = SlotState.SET.value
 
     def get_slot(
         self,
@@ -221,33 +230,33 @@ class SharedCache:
 
         The main reason to use this method over __getitem__ is that we
         allow you to call this method when idx is out of bounds of the
-        cache (by setting allow_oob_idx=True).
+        cache, but within the range of the dataset.
 
         In this case the method returns None when idx is out of bounds.
 
         Args:
             idx (int): Index of the slot to get.
             allow_oob_idx (bool, optional): When False, raises an error if
-                idx is out of bounds of the dataset. Defaults to True.
+                idx is out of bounds of the cache. Defaults to True.
             allow_empty_slot (bool, optional): When True, returns
-                None if the slot is empty (all-zero). Otherwise, raises
+                None if the slot is empty. Otherwise, raises
                  an exception. Defaults to True.
         """
-        if not self._idx_in_cache(idx):
+        slot_state = self._slot_state(idx)
+        if slot_state == SlotState.OOB:
             if not allow_oob_idx:
                 raise IndexError(
                     f"Index {idx} out of bounds of SharedCache of length {len(self)}"
                 )
             return None
 
-        if self.is_slot_empty(idx):
+        if slot_state == SlotState.EMPTY:
             if allow_empty_slot:
                 return None
             else:
                 raise RuntimeError(
                     f"Tried to read from an empty slot {idx=} in SharedCache."
                 )
-
         return self[idx]
 
 
