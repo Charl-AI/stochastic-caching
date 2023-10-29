@@ -1,3 +1,5 @@
+import multiprocessing as mp
+
 import numpy as np
 import pytest
 import torch
@@ -122,3 +124,38 @@ def test_get_slot(cache: SharedCache):
     idx_to_get = ds_len + 1
     with pytest.raises(IndexError):
         _ = cache.get_slot(idx_to_get)
+
+
+@pytest.mark.skip(reason="Not a test, just a helper")
+def set_slot(cache: SharedCache, idx: int, value: torch.Tensor):
+    cache.set_slot(idx, value, allow_overwrite=True, allow_oob_idx=False)
+
+
+@pytest.mark.skip(reason="Not a test, just a helper")
+def get_slot(cache: SharedCache, idx: int):
+    return cache.get_slot(idx, allow_oob_idx=False, allow_empty_slot=False)
+
+
+def test_slots_multiprocess(cache: SharedCache):
+    cache_len = len(cache)
+    write_idx_1 = int(torch.randint(0, cache_len, (1,)).item())
+    write_idx_2 = int(torch.randint(0, cache_len, (1,)).item())
+    write_value_1 = torch.randint(0, 255, DATA_DIMS, dtype=DTYPE)
+    write_value_2 = torch.randint(0, 255, DATA_DIMS, dtype=DTYPE)
+
+    with mp.Pool(2) as p:
+        _ = p.starmap(
+            set_slot,
+            [
+                (cache, write_idx_1, write_value_1),
+                (cache, write_idx_2, write_value_2),
+            ],
+        )
+
+    with mp.Pool(2) as p:
+        read_value_1, read_value_2 = p.starmap(
+            get_slot, [(cache, write_idx_1), (cache, write_idx_2)]
+        )
+
+    assert torch.all(read_value_1 == write_value_1)
+    assert torch.all(read_value_2 == write_value_2)
