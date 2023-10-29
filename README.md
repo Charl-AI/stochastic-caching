@@ -46,7 +46,7 @@ class MyDataset(Dataset):
             size_limit_gib=32,
             dataset_len=dataset_len,
             data_dims=data_dims,
-            dtype="8-bit",
+            dtype=torch.uint8,
         )
 
     def __getitem__(self, idx):
@@ -65,7 +65,7 @@ We run some basic benchmarks for stochastic caching under a realistic workload -
 
 We train `mobilenet_v3_small` on a 50k sample dataset for two epochs. The reason we use such a tiny model is to ensure that we are in the dataloading-bottlenecked regime. In the first epoch, the stochastic cache is being lazily filled. In the second epoch, the cache is being read from.
 
-We perform two sets of experiments: one with the data on a local HDD, and one with the data being read from another machine on the network.
+We perform two sets of experiments: one with the data on a local HDD, and one with the data being read from another machine on the network. All experiments are run on the same machine: RTX 3090 GPU, i9 10th gen CPU.
 
 In all epochs apart from the first, stochastic caching gives a speedup that scales linearly with the percentage of the dataset being cached. There is a very small overhead in the first epoch (due to filling the cache), but by the end of the second epoch, the speedup from caching more than compensates for this.
 

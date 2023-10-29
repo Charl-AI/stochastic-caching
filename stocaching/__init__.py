@@ -3,7 +3,6 @@
 import ctypes
 import multiprocessing as mp
 import os
-from typing import Literal
 
 import numpy as np
 import torch
@@ -12,11 +11,15 @@ __all__ = ["SharedCache", "get_shm_size"]
 
 BYTES_PER_GIB = 1024**3
 
-CTYPE_MAP = {
-    "8-bit": (ctypes.c_uint8, 8),
-    "16-bit": (ctypes.c_uint16, 16),
-    "32-bit": (ctypes.c_uint32, 32),
-    "64-bit": (ctypes.c_uint64, 64),
+C_DTYPES = {
+    torch.bool: ctypes.c_bool,
+    torch.uint8: ctypes.c_uint8,
+    torch.int8: ctypes.c_int8,
+    torch.int16: ctypes.c_int16,
+    torch.int32: ctypes.c_int32,
+    torch.int64: ctypes.c_int64,
+    torch.float32: ctypes.c_float,
+    torch.float64: ctypes.c_double,
 }
 
 
@@ -41,6 +44,7 @@ class SharedCache:
     Example usage:
 
     ```python
+    import torch
     from stocaching import SharedCache
     from torch.utils.data import Dataset
 
@@ -58,7 +62,7 @@ class SharedCache:
                 size_limit_gib=32,
                 dataset_len=dataset_len,
                 data_dims=data_dims,
-                dtype="8-bit",
+                dtype=torch.uint8
             )
         def __getitem__(self, idx):
             # retrieve data from cache if it's there
@@ -66,7 +70,8 @@ class SharedCache:
             # x will be None if the cache slot was empty or OOB
             if x is None:
                 x = ... # load data to uint8 tensor from disk
-                self.cache.set_slot(idx, x) # try to cache x
+                # try to cache x, no-op if idx is OOB of the cache
+                self.cache.set_slot(idx, x)
             return x
     ```
     """
@@ -76,30 +81,30 @@ class SharedCache:
         size_limit_gib: int,
         dataset_len: int,
         data_dims: tuple[int, ...],
-        dtype: Literal["8-bit", "16-bit", "32-bit", "64-bit"] = "8-bit",
+        dtype: torch.dtype = torch.uint8,
     ) -> None:
         """
         Args:
             size_limit_gib (int): Maximum size of the cache in GiB.
-            dataset_len (int): Length (number of samples) in the full dataset.
+            dataset_len (int): Length (number of samples) of the full dataset.
             data_dims (tuple[int, ...]): Dimensions of the data to be stored in the
-                cache. E.g. (C, H, W) for 2D image data. Do not include batch dim.
-            dtype (Literal["8-bit", "16-bit", "32-bit", "64-bit"], optional): Data type
-                of the dataset to cache. 8-bit (i.e. 0-255 int) is the recommended
-                format. Defaults to "8-bit".
+                cache. E.g. (C, H, W) for 2D image data. Does not include batch dim.
+            dtype (torch.dtype, optional): Torch data type of the dataset to cache.
+                Must be in the subset of torch dtypes with corresponding ctypes:
+                bool, uint8, int8, int16, int32, int64, float32, float64.
+                Defaults to torch.uint8 (this is usually best for jpg images).
         """
         self._apparent_len = dataset_len
 
-        # size to allocate for each data point
-        slot_bytes = np.prod(data_dims) * CTYPE_MAP[dtype][1] / 8
-
-        data_bytes = slot_bytes * dataset_len
+        dtype_bytes = dtype.itemsize
+        slot_bytes = np.prod(data_dims) * dtype_bytes
+        dataset_bytes = slot_bytes * dataset_len
         size_limit_bytes = size_limit_gib * BYTES_PER_GIB
 
-        if data_bytes > size_limit_bytes:
+        if dataset_bytes > size_limit_bytes:
             cache_len = int(size_limit_bytes / slot_bytes)
             print(
-                f"Dataset size ({data_bytes / BYTES_PER_GIB:.1f} GiB) exceeds cache"
+                f"Dataset size ({dataset_bytes / BYTES_PER_GIB:.1f} GiB) exceeds cache"
                 + f" limit ({size_limit_gib} GiB)."
                 + f" Allocating space to cache {cache_len} / {dataset_len} samples."
             )
@@ -107,13 +112,13 @@ class SharedCache:
         else:
             cache_len = dataset_len
             print(
-                f"Dataset size ({data_bytes / BYTES_PER_GIB:.1f} GiB) fits in cache"
+                f"Dataset size ({dataset_bytes / BYTES_PER_GIB:.1f} GiB) fits in cache"
                 + f" limit ({size_limit_gib} GiB)."
                 + f" Allocating space to cache all {cache_len} samples."
             )
 
         shared_array_base = mp.Array(
-            CTYPE_MAP[dtype][0], int(np.prod(data_dims) * cache_len)
+            C_DTYPES[dtype], int(np.prod(data_dims) * cache_len)
         )
         shared_array = np.ctypeslib.as_array(shared_array_base.get_obj())
         shared_array = shared_array.reshape((cache_len, *data_dims))

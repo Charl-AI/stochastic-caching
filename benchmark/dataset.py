@@ -1,6 +1,7 @@
 import os
 from typing import Callable
 
+import numpy as np
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
@@ -84,7 +85,7 @@ class DummyDataset(Dataset):
 
         if cache_limit_gib != 0:
             self.cache = SharedCache(
-                cache_limit_gib, DATASET_LEN, CACHED_DATA_DIMS, dtype="8-bit"
+                cache_limit_gib, DATASET_LEN, CACHED_DATA_DIMS, dtype=torch.uint8
             )
 
     def _get_img(self, idx) -> torch.Tensor:
