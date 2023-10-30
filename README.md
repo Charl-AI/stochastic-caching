@@ -24,7 +24,7 @@ You can get and set items in the cache with `x = cache[idx]`, and `cache[idx] = 
 
 When the dataset is too large to cache completely, `len(cache) < len(dataset)`. If you used the getter and setter directly, you would end up with lots of fiddly code to check if idx is in bounds for the cache. We provide two convenience methods `get_slot`, and `set_slot`, which allow you to treat the cache as if it has the same length as the dataset. Using `get_slot` out of bounds of the cache simply returns `None`. Using `set_slot` out of bounds is a no-op. These methods are designed to minimise the amount of code you need to write in the `__getitem__` method of your dataset.
 
-**Advanced:** Internally, the cache is simply a single pytorch array, backed by shared memory. You can access the underlying array with the `underlying_array` property.
+**Advanced:** Internally, the cache is simply a single pytorch array, backed by shared memory. You can access the underlying array with the `array` property. We also keep an auxiliary array in shared memory, which tracks which samples have been cached, which are yet to be cached, and which are out-of-bounds of the cache. You can access it directly with the `aux_array` property. 
 
 ## Example
 
