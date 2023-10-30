@@ -4,7 +4,7 @@ Is your training pipeline data-bottlenecked? Are you looking for a zero-effort s
 
 Introducing `stocaching`, a tiny (1 file) library for stochastic dataset caching in PyTorch.
 
-See [this blog post]() if you want to understand the benefits, motivation, and decisions behind the library.
+See [this blog post](https://charl-ai.github.io/blog/dataloaders/) if you want to understand the benefits, motivation, and decisions behind the library.
 
 Feel free to simply copy-paste the module into your projects! Alternatively, you can install with pip:
 
@@ -90,7 +90,7 @@ Generally, you don't want to do any random augmentations before caching because 
 
 Splitting your transforms/augmentation pipeline into two phases is a good idea. The first phase converts your data to a (possibly resized) uint8 tensor. The output of this phase gets cached. The second phase should do random augmentations, convert to float32, and normalise. This phase happens 'on-line' and the output goes straight into your model.
 
-For an example of how to do this properly, see the implementation in `benchmark/dataset.py`. You can also read the [blog post]() for more information.
+For an example of how to do this properly, see the implementation in `benchmark/dataset.py`. You can also read the [blog post](https://charl-ai.github.io/blog/dataloaders/) for more information.
 
 ### Does this work with multi-GPU (DDP) training?
 
