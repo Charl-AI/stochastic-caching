@@ -82,7 +82,7 @@ As much as you like! The speedup from caching scales linearly with the % of your
 
 The shared memory is stored in `/dev/shm` (tmpfs), so this is likely the limiting factor for you. We provide a convenience function `get_shm_size` to check how large it is. Alternatively, check with `df -h`.
 
-Most Unix-like systems have `/dev/shm` pre-set to 50% of your RAM. You can temporarily resize it (e.g. to 128 GiB) by running: `mount -o remount,size=128G /dev/shm`.
+Most Unix-like systems have `/dev/shm` pre-set to 50% of your RAM. You can temporarily resize it (e.g. to 128 GiB) by running: `mount -o remount,size=128G /dev/shm` (warning: do this at your own risk).
 
 ### How does this interact with augmentations/transforms?
 
