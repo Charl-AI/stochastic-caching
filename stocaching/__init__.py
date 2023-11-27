@@ -48,8 +48,6 @@ class SharedCache:
     which simplify usage by allowing you to treat the cache as if it were the same
     size as the full dataset.
 
-    You may access the underlying pytorch array with the `underlying_array property`.
-
     Example usage:
 
     ```python
