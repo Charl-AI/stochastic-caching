@@ -101,6 +101,10 @@ class SharedCache:
                 bool, uint8, int8, int16, int32, int64, float32, float64.
                 Defaults to torch.uint8 (this is usually best for jpg images).
         """
+        if dtype not in C_DTYPES:
+            raise ValueError(
+                f"Unsupported dtype: {dtype}. Must be one of {C_DTYPES.keys()}"
+            )
         dtype_bytes = dtype.itemsize
         slot_bytes = np.prod(data_dims) * dtype_bytes
         dataset_bytes = slot_bytes * dataset_len
