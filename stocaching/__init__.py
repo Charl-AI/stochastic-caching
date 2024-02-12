@@ -206,7 +206,7 @@ class SharedCache:
             allow_oob_idx (bool, optional): When False, raises an error if
                 idx is out of bounds of the cache. Defaults to True.
             allow_overwrite (bool, optional): When False, raises an error if
-                the slot has any existing non-zero elements. Defaults to False.
+                the slot is not empty. Defaults to False.
         """
         slot_state = self._slot_state(idx)
         if slot_state == SlotState.OOB:
