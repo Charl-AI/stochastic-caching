@@ -106,7 +106,7 @@ class SharedCache:
                 f"Unsupported dtype: {dtype}. Must be one of {C_DTYPES.keys()}"
             )
         dtype_bytes = dtype.itemsize
-        slot_bytes = np.prod(data_dims) * dtype_bytes
+        slot_bytes = int(np.prod(data_dims) * dtype_bytes)
         dataset_bytes = slot_bytes * dataset_len
         size_limit_bytes = size_limit_gib * BYTES_PER_GIB
 
@@ -133,7 +133,7 @@ class SharedCache:
             )
 
         shared_array_base = mp.Array(
-            C_DTYPES[dtype], int(np.prod(data_dims) * cache_len)
+            C_DTYPES[dtype], int(np.prod(data_dims)) * cache_len
         )
         shared_array = np.ctypeslib.as_array(shared_array_base.get_obj())
         shared_array = shared_array.reshape((cache_len, *data_dims))
